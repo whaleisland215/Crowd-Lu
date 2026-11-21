@@ -161,6 +161,7 @@
       story: "红一、红二、红四方面军三大主力胜利会师，长征以我们的胜利、敌人的失败而告终。" }
   ];
   var JOURNEY_KEY = "xinghuo_journey_v1";
+  var journeyDetours = 0;
 
   var journeyPath = document.getElementById("journeyPath");
   var journeyDetail = document.getElementById("journeyDetail");
@@ -200,22 +201,23 @@
       node.classList.toggle("lit", isLit);
       node.classList.toggle("next", isNext);
       var nextTag = node.querySelector(".j-next");
-      if (isNext && !isLit) {
-        if (!nextTag) {
-          nextTag = document.createElement("span");
-          nextTag.className = "j-next";
-          nextTag.textContent = "下一站";
-          node.appendChild(nextTag);
-        }
-      } else if (nextTag) {
-        nextTag.remove();
-      }
+      if (nextTag) nextTag.remove();
     });
     // 轨迹填充
     var fill = journeyPath.querySelector(".journey-fill");
     if (fill) fill.style.width = (lit.length / STATIONS.length) * 90 + "%";
-    if (journeyProgress) journeyProgress.textContent = "（已点亮 " + lit.length + " / " + STATIONS.length + "）";
-    if (journeyDone) journeyDone.hidden = lit.length < STATIONS.length;
+    if (journeyProgress) journeyProgress.textContent = "（已点亮 " + lit.length + " / " + STATIONS.length +
+      (journeyDetours ? " · 绕路 " + journeyDetours + " 次" : " · 零绕路") + "）";
+    if (journeyDone) {
+      journeyDone.hidden = lit.length < STATIONS.length;
+      if (lit.length === STATIONS.length) {
+        journeyDone.textContent = journeyDetours === 0
+          ? "🏆 完美通关：零绕路走完二万五千里！你练成了「活地图」。"
+          : journeyDetours <= 2
+            ? "🔥 六簇火种全部点亮！绕路 " + journeyDetours + " 次，方向感不错。"
+            : "⛰️ 六簇火种全部点亮！绕路 " + journeyDetours + " 次——真实的长征路上，绕路代价要大得多。";
+      }
+    }
   }
 
   function buildJourney() {
@@ -246,23 +248,33 @@
           return;
         }
         if (idx !== lit.length) {
-          // 未按顺序：拒绝并提示
+          // 未按顺序：记一次绕路并提示
+          journeyDetours++;
           node.classList.remove("deny");
           void node.offsetWidth; // 重启动画
           node.classList.add("deny");
-          var nextS = STATIONS[lit.length];
           journeyDetail.innerHTML = "";
           var h = document.createElement("h5");
-          h.textContent = "⏳ 还没到这一站";
+          h.textContent = "🧭 走岔了，绕路 +1";
           var p = document.createElement("p");
-          p.textContent = "长征是一步步走出来的——请先到达「" + nextS.name + "」。";
+          p.textContent = "长征是一步步走出来的，方向错了要付代价。想想哪一站更早发生——继续找正确的下一站。";
           journeyDetail.appendChild(h);
           journeyDetail.appendChild(p);
+          renderJourney();
           return;
         }
         lit.push(s.id);
         saveJourney(lit);
         showStationStory(s);
+        if (lit.length === STATIONS.length) {
+          journeyDetail.innerHTML = "";
+          var dh = document.createElement("h5");
+          dh.textContent = journeyDetours === 0 ? "🏆 零绕路抵达会宁" : "🔥 抵达会宁 · 全程绕路 " + journeyDetours + " 次";
+          var dp = document.createElement("p");
+          dp.textContent = "三大主力胜利会师。点击「重新出发」再挑战一次，看看能不能零绕路走完全程。";
+          journeyDetail.appendChild(dh);
+          journeyDetail.appendChild(dp);
+        }
         renderJourney();
       });
       journeyPath.appendChild(node);
@@ -274,7 +286,8 @@
     buildJourney();
     journeyReset.addEventListener("click", function () {
       saveJourney([]);
-      journeyDetail.innerHTML = '<p class="jd-placeholder">👆 按顺序点击地标，从瑞金出发。</p>';
+      journeyDetours = 0;
+      journeyDetail.innerHTML = '<p class="jd-placeholder">👆 按历史顺序点击地标，从瑞金出发。没有提示，走错就算一次绕路。</p>';
       buildJourney();
     });
   }
@@ -286,8 +299,11 @@
     { id: "p3", left: "杭电前身创建", right: "1956 年" },
     { id: "p4", left: '更名"杭州电子科技大学"', right: "2004 年" },
     { id: "p5", left: '"半部电台"起家', right: "1930 年龙冈战斗" },
-    { id: "p6", left: "省局共建杭电", right: "2011 年" }
+    { id: "p6", left: "省局共建杭电", right: "2011 年" },
+    { id: "p7", left: "中央红军到达吴起镇", right: "1935 年 10 月" },
+    { id: "p8", left: "首批集成电路一级学科博士点", right: "2021 年" }
   ];
+  var MATCH_TIME = 90;
   var MATCH_KEY = "xinghuo_match_best_v1";
 
   var matchGame = document.getElementById("matchGame");
@@ -310,11 +326,14 @@
     try { localStorage.setItem(MATCH_KEY, String(v)); } catch (e) { /* ignore */ }
   }
 
+  var matchTimer = null;
+
   function buildMatch() {
     if (!matchGame) return;
+    if (matchTimer) { clearInterval(matchTimer); matchTimer = null; }
     matchGame.innerHTML = "";
     if (matchDone) matchDone.hidden = true;
-    var state = { selected: null, matched: 0, moves: 0 };
+    var state = { selected: null, matched: 0, moves: 0, remain: MATCH_TIME, started: false, over: false };
 
     var colL = document.createElement("div");
     colL.className = "match-col";
@@ -325,8 +344,30 @@
       if (matchStats) {
         var best = getMatchBest();
         matchStats.textContent = "（已配对 " + state.matched + " / " + PAIRS.length +
-          " · 本次 " + state.moves + " 次" + (best ? " · 纪录 " + best + " 次" : "") + "）";
+          " · 本次 " + state.moves + " 次 · ⏱ " + state.remain + "s" +
+          (best ? " · 纪录 " + best + " 次" : "") + "）";
       }
+    }
+
+    function endByTimeout() {
+      state.over = true;
+      if (matchTimer) { clearInterval(matchTimer); matchTimer = null; }
+      matchGame.querySelectorAll(".match-btn").forEach(function (b) { b.disabled = true; b.classList.remove("sel"); });
+      matchStats.textContent = "（⏰ 时间到！已配对 " + state.matched + " / " + PAIRS.length + "）";
+      if (matchDone) {
+        matchDone.textContent = "⏰ 90 秒到，还有 " + (PAIRS.length - state.matched) + " 组没连上。点「重新连线」再试一次。";
+        matchDone.hidden = false;
+      }
+    }
+
+    function startMatchTimer() {
+      if (state.started || state.over) return;
+      state.started = true;
+      matchTimer = setInterval(function () {
+        state.remain--;
+        updateStats();
+        if (state.remain <= 0) { state.remain = 0; endByTimeout(); }
+      }, 1000);
     }
     updateStats();
 
@@ -338,7 +379,8 @@
       btn.setAttribute("data-id", id);
       btn.setAttribute("data-side", side);
       btn.addEventListener("click", function () {
-        if (btn.classList.contains("done")) return;
+        if (btn.classList.contains("done") || state.over) return;
+        startMatchTimer();
         state.moves++;
         if (side === "L") {
           colL.querySelectorAll(".match-btn").forEach(function (b) { b.classList.remove("sel"); });
@@ -359,12 +401,14 @@
             state.selected = null;
             state.matched++;
             if (state.matched === PAIRS.length && matchDone) {
+              if (matchTimer) { clearInterval(matchTimer); matchTimer = null; }
               var best = getMatchBest();
               if (!best || state.moves < best) {
                 setMatchBest(state.moves);
                 best = state.moves;
               }
-              matchDone.textContent = "🎉 全部配对成功！本次 " + state.moves + " 次点击 · 最少点击纪录 " + best + " 次。";
+              matchDone.textContent = "🎉 全部配对成功！本次 " + state.moves + " 次点击 · 用时 " +
+                (MATCH_TIME - state.remain) + " 秒 · 最少点击纪录 " + best + " 次。";
               matchDone.hidden = false;
             }
           } else {
@@ -432,9 +476,19 @@
       note: "2011 年浙江省与国家国防科技工业局签署共建协议，杭电是省属高校中唯一拥有国防特色重点专业的高校。" },
     { cat: "杭电", type: "choice", q: "杭电的校训是？",
       opts: ["求是创新", "笃学力行、守正求新", "团结勤奋、求实创新", "自强不息、厚德载物"], answer: 1,
-      note: "校训“笃学力行、守正求新”；“团结勤奋、求实创新”是杭电的校风。" }
+      note: "校训“笃学力行、守正求新”；“团结勤奋、求实创新”是杭电的校风。" },
+    { cat: "长征", type: "choice", q: "中央红军长征途中翻越的第一座大雪山是？",
+      opts: ["夹金山", "六盘山", "岷山", "大巴山"], answer: 0,
+      note: "1935 年 6 月，中央红军翻越海拔 4000 多米的夹金山，这是长征中翻越的第一座大雪山。" },
+    { cat: "长征", type: "judge", q: "中央红军长征出发时约 8.6 万人，抵达陕北时人数已大幅减少。",
+      opts: ["√ 对", "× 错"], answer: 0,
+      note: "1934 年 10 月中央红军 8.6 万余人出发，历经千难万险，到达陕北时已不足万人，代价极其惨重。" },
+    { cat: "杭电", type: "choice", q: "杭电入选全国首批“集成电路科学与工程”一级学科博士学位授权点是哪一年？",
+      opts: ["2011 年", "2018 年", "2021 年", "2023 年"], answer: 2,
+      note: "2021 年杭电入选全国首批“集成电路科学与工程”一级学科博士学位授权点，为浙江省属高校唯一。" }
   ];
-  var QUIZ_TIME = 150;
+  var QUIZ_TIME = 120;
+  var QUIZ_PENALTY = 10;
   var QUIZ_KEY = "xinghuo_quiz_best_v1";
 
   var quizBox = document.getElementById("quizBox");
@@ -457,8 +511,8 @@
   }
   function rankOf(score) {
     if (score === QUIZ.length) return "称号：星火传承人 🔥";
-    if (score >= 10) return "称号：长征突击手 ⚔️";
-    if (score >= 7) return "称号：行军战士 🎖️";
+    if (score >= QUIZ.length - 3) return "称号：长征突击手 ⚔️";
+    if (score >= Math.ceil(QUIZ.length * 0.6)) return "称号：行军战士 🎖️";
     return "称号：初上征途 🌱";
   }
   function showCombo(n) {
@@ -558,6 +612,12 @@
             all[item.answer].classList.add("correct");
             quizState.combo = 0;
             showCombo(0);
+            quizState.remain = Math.max(1, quizState.remain - QUIZ_PENALTY);
+            updateTimerText();
+            var penalty = document.createElement("span");
+            penalty.className = "quiz-penalty";
+            penalty.textContent = " ⏱ -" + QUIZ_PENALTY + "s";
+            btn.appendChild(penalty);
           }
           var note = document.createElement("p");
           note.className = "quiz-hint";
