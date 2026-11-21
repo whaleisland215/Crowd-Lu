@@ -499,7 +499,7 @@
     <!-- 关卡一：重走长征路 -->
     <div class="level-wrap reveal">
       <h3 class="quiz-title"><span class="level-badge">关卡一</span>重走长征路 · 点亮六大地标</h3>
-      <p class="quiz-hint">长征是一步步走出来的：按历史顺序点击地标，解锁下一站，点亮一簇火种。<span id="journeyProgress" class="progress-hint"></span></p>
+      <p class="quiz-hint">长征是一步步走出来的：这里没有路线提示，只靠你自己判断先后。走错一站就记一次「绕路」，<strong>零绕路通关</strong>才算真本事。<span id="journeyProgress" class="progress-hint"></span></p>
       <div class="journey-path" id="journeyPath"></div>
       <div class="journey-detail" id="journeyDetail">
         <p class="jd-placeholder">👆 点击上方地标，开始你的长征。</p>
@@ -511,7 +511,7 @@
     <!-- 关卡二：时空连线 -->
     <div class="level-wrap reveal">
       <h3 class="quiz-title"><span class="level-badge">关卡二</span>时空连线 · 事件与年代配对</h3>
-      <p class="quiz-hint">先点左侧事件，再点右侧年代，配对正确自动锁定。挑战最少点击纪录！<span id="matchStats" class="progress-hint"></span></p>
+      <p class="quiz-hint">8 组事件与年代，先点左侧事件、再点右侧年代，配对正确自动锁定。<strong>限时 90 秒</strong>，点击次数越少越强。<span id="matchStats" class="progress-hint"></span></p>
       <div class="match-game" id="matchGame"></div>
       <div class="level-done" id="matchDone" hidden>🎉 全部配对成功！历史事件与时间，已经装进你的行囊。</div>
       <button class="btn btn-ghost-dark btn-sm" id="matchReset">重新连线</button>
@@ -520,10 +520,10 @@
     <!-- 关卡三：知识闯关 -->
     <div class="level-wrap reveal">
       <h3 class="quiz-title"><span class="level-badge">关卡三</span>长征 × 杭电 知识闯关</h3>
-      <p class="quiz-hint">共 12 题（选择 + 判断），限时 150 秒（点击第一题后开始计时）。连续答对可触发连击，挑战你的最佳成绩。</p>
+      <p class="quiz-hint">共 15 题（选择 + 判断），<strong>限时 120 秒</strong>（点击第一题后开始计时），答错扣 10 秒。连击可叠加连击特效，满分才算真正过关。</p>
       <div class="quiz-top">
         <div class="quiz-progress"><div class="quiz-progress-fill" id="quizProgressFill"></div></div>
-        <div class="quiz-timer" id="quizTimer">⏱ 150s</div>
+        <div class="quiz-timer" id="quizTimer">⏱ 120s</div>
         <div class="quiz-combo" id="quizCombo" hidden></div>
       </div>
       <div id="quizBox"></div>
