@@ -645,7 +645,7 @@
   var WALL_KEY = "xinghuo_wall_v1";
   var SEEDS = [
     { text: "先辈用脚步丈量信仰，我们用芯片丈量未来。", meta: "来自一名杭电学子" },
-    { text: "把每一行代码，都写成新时代的行军号子。", meta: "计算机学院 · 匿名" },
+    { text: "把每一行代码，都写成新时代的行军号子。", meta: "电子信息学院 · 匿名" },
     { text: "走好我们这代人的长征路！", meta: "2026 · 双庆之年" }
   ];
   var wallGrid = document.getElementById("wallGrid");
